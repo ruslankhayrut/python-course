@@ -3,7 +3,7 @@ Course Files for Complete Python 3 Bootcamp Course on Udemy
 
 Copyright(©) by Pierian Data Inc.
 
-# Before we start
+# Preparing environment
 
 Before you start, you need to install Python on your machine. 
 [Here](https://realpython.com/installing-python/) are the instructions. 
