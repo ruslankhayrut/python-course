@@ -17,3 +17,13 @@ Finally, you need to install `Jupyter Notebook`
 Check your installation by executing `jupyter notebook` command in a command shell.
 You should see a jupyter notebook running here: `http://localhost:8888/tree`.
 A browser window should open automatically once a notebook is launched.
+
+# How to submit solutions
+
+For each task create a new branch from `master` called `feature/<test_name>_solution`.
+
+Copy a notebook with the task and call it `<notebook_name> Solution.ipynb`. Then write your code in this notebook.
+
+For project-like tasks you can write code in simple .py files, not in notebooks, if it's more convenient for you.
+
+Once completed, create a pull-request. 
