@@ -20,10 +20,16 @@ A browser window should open automatically once a notebook is launched.
 
 # How to submit solutions
 
-For each task create a new branch from `master` called `feature/<test_name>_solution`.
+For each task create a new branch from `master` named `feature/<test_name>_solution`.
 
-Copy a notebook with the task and call it `<notebook_name> Solutions.ipynb`. Then write your code in this notebook.
+Copy a notebook with the task and name it `<notebook_name> Solutions.ipynb`. Then write your code in this notebook.
 
 For project-like tasks you can write code in simple .py files, not in notebooks, if it's more convenient for you.
 
 Once completed, create a pull-request. 
+
+# Additional tasks
+
+[Fundamentals](https://www.codewars.com/collections/fundamentals-125)
+
+[OOP](https://www.codewars.com/collections/oop-102)
