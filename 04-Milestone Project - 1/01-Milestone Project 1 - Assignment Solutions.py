@@ -1,117 +1,91 @@
-def print_board(board):
-    print('*************************')
-    i = 1
-    for field in board:
-        print(field)
-
-        if i % 3 == 0:
-            print('*************************')
-
-        i += 1
+from typing import Union
 
 
-def user_input(board, player):
+def print_board():
+    print(f'{BOARD[1]} {BOARD[2]} {BOARD[3]}')
+    print(f'{BOARD[4]} {BOARD[5]} {BOARD[6]}')
+    print(f'{BOARD[7]} {BOARD[8]} {BOARD[9]}')
+
+
+def user_input(player: str) -> int:
     position = 'wrong'
 
+    print(f'\nPlayer {player} turn')
+
     while position.isdigit() == False:
+
+        value = input('Choose a position: (1-9)\n')
         print()
-        print(f'Player {player} turn')
-        position = input('Choose a position: (1-9)\n')
-        print()
 
-        if position.isdigit() == False:
-            print('Not a digit, try again')
+        if value.isdigit() == False:
+            print('Not a digit, try again.')
             continue
 
-        if int(position) in board:
-            print('Position is occupied')
+        if int(value) not in range(1, 10):
+            print('Not in range, try again.')
             continue
 
-        if int(position) not in range(1, 10):
-            print('Not in range, try again')
+        if BOARD[int(value)] != '-':
+            print('Position is occupied, try again.')
             continue
+
+        position = value
 
         return int(position)
 
 
-def update_board_looks(board, position, x_turn):
-    x_fields = ['* *', ' * ', '* *']
-    o_fields = [' * ', '* *', ' * ']
-
-    x = 0 if position < 4 else 6 if position > 6 else 3
-    y = 3 if position in [1, 4, 7] else 19 if position in [3, 6, 9] else 11
-
-    for i, j in enumerate(range(x, x+3)):
-        fields = x_fields[i] if x_turn else o_fields[i]
-        board[j] = board[j][:y] + fields + board[j][y + 3:]
-
-    return board
-
-
-def update_board(board, position, symbol):
-    board[position] = symbol
-    return board
-
-
-def set_has_win(the_set):
+def set_has_win(the_set: set) -> bool:
     return len(the_set) == 1 and the_set != set('-')
 
 
-def check_win(board):
+def check_win() -> Union[bool, str]:
     winner = False
     # horizontal check
     for i in range(1, 8, 3):
-        if set_has_win(set((board[i], board[i+1], board[i+2]))):
-            return board[i]
+        if set_has_win(set((BOARD[i], BOARD[i+1], BOARD[i+2]))):
+            return BOARD[i]
 
     # vertical check
     for i in range(1, 4):
-        if set_has_win(set((board[i], board[i+3], board[i+6]))):
-            return board[i]
+        if set_has_win(set((BOARD[i], BOARD[i+3], BOARD[i+6]))):
+            return BOARD[i]
 
     # diagonal check
-    if set_has_win(set((board[1], board[5], board[9]))):
-        return board[1]
+    if set_has_win(set((BOARD[1], BOARD[5], BOARD[9]))):
+        return BOARD[1]
 
-    if set_has_win(set((board[3], board[5], board[7]))):
-        return board[3]
+    if set_has_win(set((BOARD[3], BOARD[5], BOARD[7]))):
+        return BOARD[3]
 
     return winner
 
 
 def game():
-    board = ['placeholder'] + ['-' for i in range(9)]
-    game_over = False
-    x_turn = True
-    counter = 1
+    winner = False
+    current_turn = 'X'
+    counter = 0
 
-    board_looks = ['*       *       *       *' for i in range(9)]
-    print('Your starting board:')
-    print_board(board_looks)
+    print('Starting board:')
+    print_board()
 
-    while not game_over:
-        position = user_input(board, ('X' if x_turn else 'O'))
+    while not winner and counter != 9:
+        position = user_input(current_turn)
 
-        board = update_board(board, position, ('X' if x_turn else 'O'))
-        board_looks = update_board_looks(board_looks, position, x_turn)
+        BOARD[position] = current_turn
 
-        print_board(board_looks)
+        print_board()
 
-        if counter > 5:
-            winner = check_win(board)
-            game_over = bool(winner)
+        if counter > 3:
+            winner = check_win()
 
-        if counter == 9:
-            break
-
+        current_turn = 'X' if current_turn == 'O' else 'O'
         counter += 1
-        x_turn = not x_turn
 
-    print()
-    if bool(winner):
+    if winner:
         print(f'The winner is {winner} player! Game over, thanks for playing.')
     else:
-        print('Game over! No more playing fields! Try again.')
+        print('Game over! No more playing fields!')
 
 
+BOARD = ['placeholder'] + ['-' for _ in range(9)]
 game()
