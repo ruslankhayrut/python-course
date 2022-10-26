@@ -222,6 +222,7 @@ def blackjack():
 
         while dealer.sum_cards() < 17:
             print_status()
+            print('Dealer hits.')
             dealer.add_card(deck.deal_one())
 
         if dealer.sum_cards() > 21:
@@ -229,6 +230,8 @@ def blackjack():
             print(f'Dealer busts. You win!')
             player.has_won(True)
             continue
+
+        print('Dealer stands.')
 
         # compare final results
         print_status()
