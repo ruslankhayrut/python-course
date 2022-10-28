@@ -1,77 +1,53 @@
 import random
-from abc import ABC
-from typing import List
-
-"""
-No need to write error message in __init__ actually. 
-You can do
-
-class NoMoreChips(Exception):
-    pass
-
-And then
-
-raise NoMoreChips("Error msg")
-
-Which is more flexible
-"""
+from enum import Enum
 
 
-class NoMoreChips(Exception):
-    def __init__(self):
-        super().__init__("You don't have any more chips for playing.")
+SUITS = ("Hearts", "Diamonds", "Spades", "Clubs")
+RANKS = ("Two", "Three", "Four", "Five", "Six", "Seven",
+         "Eight", "Nine", "Ten", "Jack", "Queen", "King", "Ace")
+
+VALUES = {
+    "Two": 2,
+    "Three": 3,
+    "Four": 4,
+    "Five": 5,
+    "Six": 6,
+    "Seven": 7,
+    "Eight": 8,
+    "Nine": 9,
+    "Ten": 10,
+    "Jack": 10,
+    "Queen": 10,
+    "King": 10,
+    "Ace": 1,
+}
+
+BLACKJACK = 21
+DEALER_SUM_BORDER = 17
+
+
+class Winner(Enum):
+    PLAYER = 1
+    DRAW = 0
+    DEALER = -1
 
 
 class Card:
-    suits = ("Hearts", "Diamonds", "Spades", "Clubs")
-    ranks = (
-        "Two",
-        "Three",
-        "Four",
-        "Five",
-        "Six",
-        "Seven",
-        "Eight",
-        "Nine",
-        "Ten",
-        "Jack",
-        "Queen",
-        "King",
-        "Ace",
-    )
-
-    values = {
-        "Two": 2,
-        "Three": 3,
-        "Four": 4,
-        "Five": 5,
-        "Six": 6,
-        "Seven": 7,
-        "Eight": 8,
-        "Nine": 9,
-        "Ten": 10,
-        "Jack": 10,
-        "Queen": 10,
-        "King": 10,
-        "Ace": 1,
-    }
-
     def __init__(self, suit, rank):
         self.suit = suit
         self.rank = rank
-        self.value = Card.values[rank]
+        self.value = VALUES[rank]
 
     def __str__(self):
-        # always try to use fstrings, since they are more readable and faster
-        return self.rank + " of " + self.suit
+        return f"{self.rank} of {self.suit}"
 
 
 class Deck:
     def __init__(self, num_of_decks: int = 1):
         self.all_cards = []
         for _ in range(num_of_decks):
-            for suit in Card.suits:
-                for rank in Card.ranks:
+            for suit in SUITS:
+                for rank in RANKS:
                     self.all_cards.append(Card(suit, rank))
 
     def shuffle(self):
@@ -80,45 +56,15 @@ class Deck:
     def deal_one(self):
         return self.all_cards.pop()
 
-    def add_cards(self, cards: List[Card]):
+    def add_cards(self, cards: list[Card]):
         self.all_cards.extend(cards)
         self.shuffle()
 
 
-class Playable(ABC):
-    """
-    Name should be declared in __init__, as I assume it's an instance property, not a class one
-    Because in general we can have several players with different names
-    In practice, class properties are not used very often
-
-    The way you implemented it in Card class is reasonable,
-    but suits, ranks and values could also be implemented as constants
-
-    For this base class you can do
-
-        ...
-        self.name = "Unnamed"
-
-    then in Player class
-    def __init__(self, name, chips):
-        super().__init__()
-        self.name = name
-        ...
-
-    and in Dealer class
-
-        ...
-        self.name = "Dealer"
-    """
-
-    name = "Dealer"
-
+class Hand():
     def __init__(self) -> None:
-        self.cards: List[Card] = []
+        self.cards: list[Card] = []
         self.has_ace = False
-
-    def get_cards(self) -> List[Card]:
-        return self.cards
 
     def sum_cards(self) -> int:
         summed = sum([card.value for card in self.cards])
@@ -129,17 +75,10 @@ class Playable(ABC):
 
     def add_card(self, card: Card):
         self.cards.append(card)
+        self.has_ace = card.rank == "Ace" or self.has_ace
+        print(f'    {card}')
 
-        """
-        this can be substituted with a one-liner
-        self.has_ace = card.rank == "Ace"
-        """
-
-        if card.rank == "Ace":
-            self.has_ace = True
-        print(f"{self.name} got a {card}")
-
-    def prepare_for_next_round(self) -> List[Card]:
+    def prepare_for_next_round(self) -> list[Card]:
         self.has_ace = False
         cards = self.cards
         self.cards = []
@@ -147,250 +86,343 @@ class Playable(ABC):
         return cards
 
 
-class Player(Playable):
-    def __init__(self, name: str, chips: int) -> None:
+class PlayerHand(Hand):
+    def __init__(self, index: int = 1) -> None:
+        self.name = f'Hand {index}'
+        self.current_bet: int = 0
+        self.to_split = True
+        self.round_over = False
         super().__init__()
+
+    def view_cards(self):
+        cards = ', '.join([str(card) for card in self.cards])
+        print(f'{self.name}: {cards}')
+
+    def add_card(self, card: Card):
+        print(f'{self.name} gets:')
+        super().add_card(card)
+
+    def process_round_winner(self, winner: Winner) -> int:
+        self.round_over = True
+        return self.current_bet * winner.value
+
+    def can_be_split(self) -> bool:
+        can_be_split = True if self.cards[0].rank == self.cards[1].rank else False
+        return can_be_split and self.to_split
+
+
+class Player():
+    def __init__(self, name: str, chips: int) -> None:
         self.name = name
         self.chips = chips
-        self.current_bet = 0
+        self.finished_round = False
+        self.hands: list[PlayerHand] = [PlayerHand()]
 
-    def place_bet(self, bet: int) -> bool:
-        if not self.chips:
-            raise NoMoreChips()
+    def get_hands(self):
+        return [hand for hand in self.hands if not hand.round_over]
 
+    def first_hand(self) -> PlayerHand:
+        return self.get_hands()[0]
+
+    def place_bet(self, hand: PlayerHand, bet: int) -> bool:
         if bet <= self.chips:
-            self.current_bet = bet
+            hand.current_bet = bet
             return True
 
         print("Make smaller bet, not enough chips, try again.")
         return False
 
-    def has_won(self, win: bool = None):
-        """
-        This can be simplified
-        self.chips += self.current_bet if win else -self.current_bet
+    def out_of_chips(self) -> bool:
+        return self.chips == 0
 
-        I see that you have 3 states here
-        win = True, False or None
+    def process_round_winner(self, hand: PlayerHand, winner: Winner):
+        self.chips += hand.process_round_winner(winner)
 
-        I'd handle this like that:
+        if not self.get_hands():
+            self.finished_round = True
 
-        if win:
-            do stuff
-        elif win is None:
-            pass
-        else:
-            do another stuff
+    def prepare_for_next_round(self) -> list[Card]:
+        self.finished_round = False
+        cards = []
+        for hand in self.hands:
+            cards.extend(hand.prepare_for_next_round())
 
-        self.current_bet = 0
+        self.hands = [PlayerHand()]
+        return cards
 
-        But actually this ternary condition is not supposed to be handled with booleans, since they are binary.
-        I'd introduce something like `coefficients`, -1, 0, 1
+    def has_splittable(self) -> bool:
+        for hand in self.hands:
+            if hand.can_be_split():
+                return True
+        return False
 
-        Going further, these 3 win states could be introduced as simple enum like
-        WinnerEnum:
-            PLAYER = 1
-            DRAW = 0
-            DEALER = -1
-
-        Then the method could be renamed to `process_round_winner`
-        I.e.
-            self.process_round_winner(winner: int):
-                self.chips += self.current_bet * winner
-                self.current_bet = 0
-        """
-        if win:
-            self.chips += self.current_bet
-        elif win == False:
-            self.chips -= self.current_bet
-
-        self.current_bet = 0
+    def split(self, hand: PlayerHand) -> PlayerHand:
+        new_hand = PlayerHand(len(self.hands) + 1)
+        print('New (split) hand gets:')
+        new_hand.add_card(hand.cards.pop())
+        self.hands.append(new_hand)
+        return new_hand
 
 
-class Dealer(Playable):
+class Dealer():
     def __init__(self) -> None:
-        super().__init__()
+        self.name = 'Dealer'
         self.hidden_card: Card = None
+        self.hand: Hand = Hand()
 
     def add_card(self, card: Card):
-        """
-        Use guard clauses https://medium.com/lemon-code/guard-clauses-3bc0cd96a2d3
-        E.g.
-
-        if len(self.cards) != 1 or self.hidden_card:
-            super().add_card(card)
+        if len(self.hand.cards) != 1 or self.hidden_card:
+            print('Dealer got a:')
+            self.hand.add_card(card)
             return
 
-        print('Dealer got a hidden card')
+        print("Dealer got a hidden card")
         self.hidden_card = card
-        """
-        if len(self.cards) == 1 and not self.hidden_card:
-            print("Dealer got a hidden card")
-            self.hidden_card = card
-        else:
-            super().add_card(card)
 
     def show_hidden(self):
-        print(f"Dealer reveals hidden card: {self.hidden_card}")
-
-        # same as per user
-        if self.hidden_card.rank == "Ace":
-            self.has_ace = True
-
-        self.cards.append(self.hidden_card)
+        print(f"Dealer reveals hidden card:")
+        self.hand.add_card(self.hidden_card)
         self.hidden_card = None
-        print(f"Dealer's points after revealing: {self.sum_cards()}")
+        print(f"Dealer's points after revealing: {self.hand.sum_cards()}")
 
-    def prepare_for_next_round(self) -> List[Card]:
+    def prepare_for_next_round(self) -> list[Card]:
         self.hidden_card = None
-        return super().prepare_for_next_round()
+        return self.hand.prepare_for_next_round()
 
 
-# this is not needed I think
-class Interface:
-    pass
+class Blackjack:
+    def __init__(self, deck: Deck, dealer: Dealer, players: list[Player]):
+        self.all_players: list[Player] = players
+        self.dealer: Dealer = dealer
+        self.deck: Deck = deck
+        deck.shuffle()
+        self.rounds: int = 0
 
+    def current_players(self):
+        return [player for player in self.all_players if not player.finished_round]
 
-def print_status():
-    print(f"\nDealer:{dealer.sum_cards()}/{player.name}:{player.sum_cards()}\n")
+    def play(self):
+        print('\nWelcome to blackjack game!\n')
 
+        # start round
+        while True:
+            if self.rounds > 0:
+                players_to_remove = []
+                for i, player in enumerate(self.all_players):
+                    # remove players with no chips
+                    if player.out_of_chips():
+                        print(f'{player.name} is out of chips.')
+                        print(f'{player.name} is removed from game.\n')
+                        players_to_remove.append(i)
+                        continue
 
-"""
-Can you implement Blackjack as a class, 
-containing all Dealer, Player, Deck in it?
-And run game like this
+                    # ask each player for another round
+                    another_round = input_choice(
+                        f'{player.name} play another round? (y/n)\n')
 
-game = Blackjack(Dealer, Player)
-game.run()
-"""
+                    if not another_round:
+                        players_to_remove.append(i)
 
-
-def blackjack():
-    rounds = 0
-
-    while True:
-        if rounds > 0:
-            # play another game
-            if input("Play another round? y/n\n") != "y":
-                break
-
-            deck.add_cards(player.prepare_for_next_round())
-            deck.add_cards(dealer.prepare_for_next_round())
-
-        rounds += 1
-        # place bet
-        print(f"You have {player.chips} in value of chips")
-
-        try:
-            while True:
-                bet = input("Enter a bet value: ")
-
-                if not bet.isdigit():
-                    print("You didn't enter a number. Try again")
-                    continue
-
-                bet = int(bet)
-
-                placed = player.place_bet(bet)
-
-                if placed:
+                self.remove_players(players_to_remove)
+                if not self.all_players:
+                    print('No more players. Game over.')
                     break
-        except NoMoreChips as e:
-            print(str(e))
-            break
 
-        print()
+                self.prepare_next_round()
 
-        # deal initial cards
-        for _ in range(2):
-            player.add_card(deck.deal_one())
-            dealer.add_card(deck.deal_one())
+            self.rounds += 1
 
-        # check player for blackjack
+            # placing initial bets
+            for player in self.all_players:
+                print(f'{player.name} amount of chips: {player.chips}')
+                self.place_bet(player)
 
-        """
-        Why 21? 
-        Avoid using `magic numbers` https://stackoverflow.com/questions/47882/what-is-a-magic-number-and-why-is-it-bad
-        
-        The example is for Java, but I think the idea is clear
-        """
-        if player.sum_cards() == 21:
-            print_status()
-            print(f"You got Blackjack! You win!")
-            player.has_won(True)
+            print('\nInitial dealing:')
+            # initial dealing
+            for _ in range(2):
+                self.dealer.add_card(self.deck.deal_one())
+                for player in self.all_players:
+                    print(f'{player.name}')
+                    player.first_hand().add_card(self.deck.deal_one())
+
+            # splitting
+            for player in self.all_players:
+                while player.has_splittable():
+                    hand = player.first_hand()
+                    if hand.can_be_split():
+                        print(f'\n{player.name} can split:')
+                        hand.view_cards()
+
+                        split = input_choice(f'Want to split? (y/n)\n')
+                        if not split:
+                            hand.to_split = False
+                            continue
+
+                        new_hand = player.split(hand)
+                        self.place_bet(player, new_hand)
+
+                        hand.add_card(self.deck.deal_one())
+                        new_hand.add_card(self.deck.deal_one())
+
+            # check players for blackjack
+            self.print_status()
+            for player in self.all_players:
+                for hand in player.hands:
+                    if hand.sum_cards() == BLACKJACK:
+                        print(f'{player.name} {hand.name} got Blackjack!')
+                        player.process_round_winner(hand, Winner.PLAYER)
+
+            if not self.current_players():
+                print('All players got blackjack.')
+                continue
+
+            # players turn
+            for player in self.current_players():
+                for hand in player.get_hands():
+                    hand.view_cards()
+                    while hand.sum_cards() < BLACKJACK:
+                        self.print_status(player)
+                        hit = input_choice(
+                            f'{player.name} take more cards for {hand.name}? (y/n)\n')
+
+                        if not hit:
+                            break
+
+                        hand.add_card(self.deck.deal_one())
+
+                    if hand.sum_cards() > BLACKJACK:
+                        print(
+                            f'{player.name} {hand.name} busts with {hand.sum_cards()}.\n')
+                        player.process_round_winner(hand, Winner.DEALER)
+
+            if not self.current_players():
+                print('All players bust.\n')
+                continue
+
+            # dealer's turn
+            self.dealer.show_hidden()
+            if self.dealer.hand.sum_cards() == BLACKJACK:
+                self.print_status()
+                print(f'Dealer got Blackjack!')
+                for player in self.current_players():
+                    for hand in player.get_hands():
+                        player.process_round_winner(hand, Winner.DEALER)
+                continue
+
+            while self.dealer.hand.sum_cards() < DEALER_SUM_BORDER:
+                print('Dealer hits.')
+                self.dealer.add_card(self.deck.deal_one())
+                print(f'Dealer: {self.dealer.hand.sum_cards()}')
+
+            if self.dealer.hand.sum_cards() > BLACKJACK:
+                self.print_status()
+                print(f'Dealer busts with {self.dealer.hand.sum_cards()}.\n')
+                for player in self.current_players():
+                    while player.get_hands():
+                        hand = player.first_hand()
+                        player.process_round_winner(hand, Winner.PLAYER)
+                continue
+
+            print('Dealer stands.')
+            self.print_status()
+
+            for player in self.current_players():
+                while player.get_hands():
+                    hand = player.first_hand()
+                    if self.dealer.hand.sum_cards() > hand.sum_cards():
+                        print(f'{player.name} {hand.name} loses.')
+                        player.process_round_winner(hand, Winner.DEALER)
+                    elif self.dealer.hand.sum_cards() == hand.sum_cards():
+                        print(f'{player.name} {hand.name} and dealer are draw.')
+                        player.process_round_winner(hand, Winner.DRAW)
+                    else:
+                        print(f'{player.name} {hand.name} wins!')
+                        player.process_round_winner(hand, Winner.PLAYER)
+
+        print('Thanks for playing')
+
+    def prepare_next_round(self):
+        cards = []
+        for player in self.all_players:
+            cards.extend(player.prepare_for_next_round())
+        cards.extend(self.dealer.prepare_for_next_round())
+        self.deck.add_cards(cards)
+
+    def place_bet(self, player: Player, hand: PlayerHand = None):
+        hand = hand if hand else player.first_hand()
+        placed = False
+        while not placed:
+            bet = input_integer(
+                f'{player.name} enter a bet value for {hand.name}: ')
+            placed = player.place_bet(hand, bet)
+
+    def remove_players(self, player_indexes: list[int]):
+        for i in player_indexes[::-1]:
+            self.all_players.pop(i)
+
+    def print_status(self, player: Player = None):
+        if player:
+            hand_text = ' '.join(
+                [f' {hand.name} - {hand.sum_cards()};' for hand in player.hands])
+            print(
+                f'Dealer: {self.dealer.hand.sum_cards()} / {player.name}:{hand_text}')
+            return
+
+        print('\n'+'#'*15)
+        print(f'Dealer: {self.dealer.hand.sum_cards()}')
+        for player in self.current_players():
+            hand_text = ' '.join(
+                [f' {hand.name} - {hand.sum_cards()};' for hand in player.hands])
+            print(f'{player.name}:{hand_text}')
+        print('#'*15 + '\n')
+
+
+def input_integer(question: str = 'Enter an integer: ', min: int = 1, max: int = None) -> int:
+    while True:
+        value = input(question)
+
+        if not value.isdigit():
+            print('Not a number! Try again.')
             continue
 
-        # player turn
-        while player.sum_cards() < 21:
-            print_status()
-            # hit (y), stand (n)
-            if input("Do you want to take more cards? (y/n)\n") != "y":
-                break
+        value = int(value)
 
-            player.add_card(deck.deal_one())
-
-        if player.sum_cards() > 21:
-            print_status()
-            print(f"{player.name} busts.")
-            player.has_won(False)
+        if value < min:
+            print('Must be above zero! Try again.')
             continue
 
-        # dealer turn
-        dealer.show_hidden()
-        if dealer.sum_cards() == 21:
-            print_status()
-            print(f"Dealer got Blackjack! You lose!")
-            player.has_won(False)
+        if max and value > max:
+            print(f'Maximum value is {max}! Try again')
             continue
 
-        while dealer.sum_cards() < 17:
-            print_status()
-            print("Dealer hits.")
-            dealer.add_card(deck.deal_one())
-
-        if dealer.sum_cards() > 21:
-            print_status()
-            print(f"Dealer busts. You win!")
-            player.has_won(True)
-            continue
-
-        print("Dealer stands.")
-
-        # compare final results
-        print_status()
-        if dealer.sum_cards() > player.sum_cards():
-            print(f"Dealer wins. You lose!")
-            player.has_won(False)
-        elif dealer.sum_cards() == player.sum_cards():
-            print(f"Draw! No one wins.")
-            player.has_won(None)
-        else:
-            print(f"You win!")
-            player.has_won(True)
-
-    print("Thanks for playing")
+        return value
 
 
-print("\nWelcome to blackjack game!\n")
-name = input("What's your name? ")
+def input_choice(question: str, choices: dict = {'y': True, 'n': False}) -> bool:
+    while True:
+        choice = input(question)
 
-while True:
-    chips = input("How much chips will you start the game with? ")
-    if not chips.isdigit():
-        print("You didn't enter a number. Try again")
-        continue
+        if choice in choices.keys():
+            return choices[choice]
 
-    chips = int(chips)
+        print('Choice not valid! Try again.')
 
-    if chips <= 0:
-        print("Must enter game with more than 0 chips")
-        continue
 
-    break
+def define_players() -> list[Player]:
+    num_of_players = input_integer('How many players? (max 7) ', max=7)
+    players = []
+    for i in range(num_of_players):
+        name = input(f'Player number {i+1} name: ')
+        chips = input_integer(f'Player number {i+1} value in chips: ')
+        players.append(Player(name, chips))
 
-player = Player(name, chips)
+    return players
+
+
+players = define_players()
 dealer = Dealer()
-deck = Deck()
-deck.shuffle()
+num_of_decks = input_integer('How many decks? (max 7) ', max=7)
+deck = Deck(num_of_decks)
 
-blackjack()
+game = Blackjack(deck, dealer, players)
+game.play()
