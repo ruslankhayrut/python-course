@@ -11,10 +11,7 @@ def collatz(n: int) -> int:
     steps = 0
     while n != 1:
         steps += 1
-        if n % 2:
-            n = n * 3 + 1
-            continue
-        n /= 2
+        n = n / 2 if not n % 2 else n * 3 + 1
 
     return steps
 
