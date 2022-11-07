@@ -4,20 +4,16 @@ Notepad style application that can open, edit, and save text documents.
 Optional: Add syntax highlighting and other features.
 """
 
-from tkinter import *
-from tkinter import filedialog
+from tkinter import Tk, Frame, Scrollbar,  Text, Menu, filedialog, RIGHT, END, Y
 
 
-class TextEditor:
+class TextEditor(Tk):
     def __init__(self) -> None:
-        self.root = Tk()
-        self.title = 'Practice Text Editor'
-        self.root.title(self.title)
-        self.root.geometry('900x460')
+        super().__init__()
+        self.title('Practice Text Editor')
+        self.geometry('900x460')
         self.current_file_name = False
-
-    def set_frame(self):
-        self.frame = Frame(self.root)
+        self.frame = Frame(self)
         self.frame.pack(pady=5)
 
     def set_text_box(self):
@@ -29,15 +25,15 @@ class TextEditor:
         text_scroll.config(command=self.text_box.yview)
 
     def set_menu(self):
-        self.menu = Menu(self.root, tearoff=False)
-        self.root.config(menu=self.menu)
+        self.menu = Menu(self, tearoff=False)
+        self.config(menu=self.menu)
 
         file_menu = [
             {'label': 'New', 'command': self.new_file, 'separate': False},
             {'label': 'Open', 'command': self.open_file, 'separate': False},
             {'label': 'Save as', 'command': self.save_as_file, 'separate': False},
             {'label': 'Save', 'command': self.save_file, 'separate': False},
-            {'label': 'Exit', 'command': self.root.quit, 'separate': True}
+            {'label': 'Exit', 'command': self.quit, 'separate': True}
         ]
         self.set_submenu('File', file_menu)
 
@@ -52,7 +48,7 @@ class TextEditor:
 
     def new_file(self):
         self.text_box.delete('1.0', END)
-        self.root.title('New File - Denic Text Editor')
+        self.title('New File - Denic Text Editor')
 
     def open_file(self):
         file_name = filedialog.askopenfilename(
@@ -67,7 +63,7 @@ class TextEditor:
             self.text_box.insert(END, file.read())
 
         name = file_name.split('/')[-1]
-        self.root.title(f'{name} - Denic Text Editor')
+        self.title(f'{name} - Denic Text Editor')
 
     def save_as_file(self):
         file_name = filedialog.asksaveasfilename(
@@ -81,21 +77,19 @@ class TextEditor:
             file.write(self.text_box.get('1.0', END))
 
         name = file_name.split('/')[-1]
-        self.root.title(f'{name} - Denic Text Editor')
+        self.title(f'{name} - Denic Text Editor')
 
     def save_file(self):
         if not self.current_file_name:
-            self.save_as_file()
-            return
+            return self.save_as_file()
 
         with open(self.current_file_name, 'w') as file:
             file.write(self.text_box.get('1.0', END))
 
     def start(self):
-        self.set_frame()
         self.set_text_box()
         self.set_menu()
-        self.root.mainloop()
+        self.mainloop()
 
 
 text_editor = TextEditor()
