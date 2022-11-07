@@ -8,7 +8,7 @@ of objects and when you may need to order more.
 
 from random import choice
 
-FLOWER_SPECIES = ['carnation', 'rose', 'arum-lily', 'sunflower', 'cornflower']
+FLOWER_SPECIES = ['Carnation', 'Rose', 'Arum-lily', 'Sunflower', 'Cornflower']
 
 
 class Flower:
@@ -16,7 +16,7 @@ class Flower:
         self.species = species
 
     def __str__(self) -> str:
-        return self.species.capitalize()
+        return self.species
 
 
 class Bouquet:
@@ -28,15 +28,14 @@ class Bouquet:
         flowers = {}
 
         for flower in self.flowers:
-            flowers[str(flower)] = flowers[str(flower)] + \
-                1 if str(flower) in flowers else 1
+            flowers[flower.species] = flowers.get(flower.species, 0) + 1
 
         return f'Bouqet contains:\n' + '\n'.join([f'{num} of {flower}' for flower, num in flowers.items()])
 
 
 class FlowerShop:
-    def __init__(self, flowers: list[Flower] = [], funds=200) -> None:
-        self.flowers: list[Flower] = flowers
+    def __init__(self, flowers: list[Flower] = None, funds=200) -> None:
+        self.flowers: list[Flower] = flowers if flowers else []
         self.funds = funds
         self.bouquets: list[Bouquet] = []
         self.sold_items: int = 0
@@ -82,6 +81,9 @@ print_statements()
 shop.generate_bouquets()
 print('\nGenerating bouquets...\n')
 print_statements()
+
+print('\nFirst bouquet in shop:\n')
+print(shop.bouquets[0])
 
 while shop.bouquets:
     shop.sell_bouquet()
