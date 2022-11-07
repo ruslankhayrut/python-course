@@ -66,8 +66,8 @@ class FlowerShop:
 
 
 def print_statements():
-    print(f'quntity of flowers in shop: {len(shop.flowers)}')
-    print(f'quntity of bouquets in shop: {len(shop.bouquets)}')
+    print(f'quantity of flowers in shop: {len(shop.flowers)}')
+    print(f'quantity of bouquets in shop: {len(shop.bouquets)}')
     print(f'funds in shop: {shop.funds}')
 
 
