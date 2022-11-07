@@ -19,7 +19,7 @@ MAX_DIGITS = 15
 class NumberName:
     def __init__(self, number: int):
         if len(str(number)) > MAX_DIGITS:
-            raise Exception('Number too big')
+            raise ValueError('Number too big')
         self.number = abs(number)
         self.negative = number < 0
 
